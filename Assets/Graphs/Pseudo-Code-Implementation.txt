@@ -1,0 +1,183 @@
+
+start() or init():
+	GenerateGraph()
+	ReadGraph()
+	InitTileInstances()
+	InitWave()
+	InitModels()
+	DrawGraph()
+
+
+
+GenerateGraph(int atomicWidth, int atomicHeight):
+	Set base width and height of all atoms to parameters
+	Define top-layer areas
+	For each top-layer area
+		Add the desired amount of atoms
+		Connect all atoms with their neighbors to shape the area
+		Add sub-areas to the area by defining a sub-set of the atoms
+		Add parameters to area and sub-areas
+	Connect all top-layer areas with each other
+
+
+ReadGraph():
+	set max and min coordinates to (0,0) each
+	Perform Depth-First search through all the atomic nodes
+	In Valid graph there should be at least 1 path for any given pair of nodes
+	For each atomic node
+		keep track of the (x, y) coordinates relative to the starting node
+		update the max or min coordinates when necessary
+	use the max and min coordinates along with the atomic node size to determine size of the grid
+
+
+InitTileInstances():
+	init set of tile Instances
+	for each prefab tile
+		for each unique rotation of tile
+			add new tile instance to set
+	for each cell in grid
+		init local tile instance set as empty set
+
+
+InitWave():
+	for each cell in grid
+		for each tile instance in set
+			wave is set to false
+			weight is set to 100
+
+InitModels():
+	init global adjacency model
+	for each tile instance in set
+		for each tile instance in set
+			for each direction
+				if tiles can be placed next to each other in direction
+					add to global adjacency model
+		for each cell in grid
+			init empty inclusion model and exclusion model
+
+DrawGraph():
+	AssignGraphAttributes()
+	For each atomic node
+		For each node attribute
+			Apply the attribute effect to the zone of the node
+		AddBorders()
+
+AddBorders(vector2 start, int width, int height, int area):
+	Add "Basic" Tiles of the Area type to the cells in the node area
+	For each direction
+		if Border has a Wall or a Door
+			for each cell in border in direction
+				AddWeight(Border or Door)
+				Observe(Border or Door)
+
+
+AddWeight(string _name, int weight, vector2 start, vector2 end, bool _wave):
+	for each cell in the area built by start and end
+		for each tile instance that contains _name in their name
+			set weight to new value
+			if weight <= 0 and _wave == false
+				set tile as impossible to observe (false) in wave
+				remove from local tile instance list if present
+			if weight > 0 and _wave == true
+				set tile as possible to observe (true) in wave
+				add to local tile instance list if not present
+
+MainLoop():
+	if not done or no contradiction
+		Observe()
+
+Observe():
+	Find cell in Grid with least remaining options to observe
+	Choose one at random from these cells
+	Observe(cell.xCoordinate, cell.yCoordinate)
+
+Observe(int x, int y):
+	for each wave entry at x, y
+		choose one of the remaining values at random based on the weight of the entries
+		for all other values in wave at x, y
+			set to false
+	Propagate(x, y)
+	UpdateGrid()
+
+Propagate(int x, int y):
+	for each cell adjacent to cell at (x,y)
+		for each tile still possible to be observed
+			if no tile in (x,y) that can be placed next to it based on adjacency models (global and local) remains possible
+				set tile to impossible (false) in wave
+		if wave of cell changed
+			Propagate(cell.x, cell.y) //repeat until no more changes happen in grid
+
+
+class Higraph 
+{
+	List<Area> areas;
+	int atomWidth;
+	int atomHeight;
+
+	void ConnectAreas(int a1, int a2, int index1, int index2, int dir, EdgeType type) {...}
+
+	void AddEdgeToArea(int area, int n1, int n2, int dir, EdgeType type) {...}
+
+	void AssignTileAttributes() {...}
+}
+
+class Area
+{
+	AreaType type;
+	List<Atom> atoms;
+	List<Area> children;
+	Area parent;
+	List<TileAttributes> attributes;
+
+	void AddChild(int[] atoms) {...}
+
+	void AddAttribute(AttrType type, string[] names, int[] values, bool flag) {...}
+
+	void AddEdge(int a1, int a2, int dir, EdgeType type)
+
+	void AssignTileAttributes() {...}
+}
+
+
+class Atom
+{
+	Atom[] connections;
+	EdgeType[] connectionType;
+	List<TileAttributes> attributes;
+
+	void AddConnection(int direction, Atom atom, EdgeType type) {...}
+
+	void GetBordersAndTypes(out boo[] borders, out bool[] doors) {...}
+}
+
+class TileAttribute
+{
+	AttrType type;
+	string[] names;
+	int[] values;
+	bool flag;
+}
+
+Enum AttrType {TileProb, TileGuarantee, TilePlace, TileAdjjacency}
+
+TileProb:
+values: [probability, rotation]
+names: [name of tile or tiles]
+flag: wether to alter the wave
+
+TileGuarantee:
+values: [lower boundary, higher boundary]
+names: [name of tile]
+flag: -
+
+TilePlace:
+values: [index of atom, rotation, optional x coordinate, optional y coordinate]
+names: [Tile name]
+flag:
+
+TileAdjacency:
+values: [Amount of adjacencies, rotation1, direction1, rotation2, direction2, ...]
+names: [Adjacency from, adjacency to 1, adjacency to 2, ...]
+flag: true == inclusion, false == exclusion
+
+Enum EdgeType {Wall, Open, Door}
